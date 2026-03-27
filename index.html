@@ -3,148 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BuzzWire Pro</title>
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22BuzzWire%20Race%22,%22short_name%22:%22BuzzWire%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#ff0055%22,%22orientation%22:%22landscape%22}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BuzzWire Arcade</title>
     <style>
-        /* THEME VARIABLES */
-        :root { 
-            --bg: #000000; --card: #121212; --txt: #ffffff; 
-            --dim-txt: #444444; --dot-off: #1a1a1a;
-            --p1: #00e5ff; --p2: #ff0055;
-            --transition: 0.4s ease;
-        }
-
-        /* LIGHT MODE OVERRIDES */
-        body.light-theme {
-            --bg: #f0f0f0; --card: #ffffff; --txt: #121212;
-            --dim-txt: #999999; --dot-off: #e0e0e0;
-        }
+        :root { --bg: #000; --card: #0a0a0a; --p1: #00e5ff; --p2: #ff0055; --txt: #fff; --gold: #ffca28; --stat: #ff4444; }
+        body.light-theme { --bg: #eee; --card: #fff; --txt: #000; --stat: #ff4444; }
         
-        html, body { 
-            overflow: hidden; height: 100vh; width: 100vw; margin: 0; padding: 0;
-            background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; 
-            color: var(--txt); transition: background var(--transition), color var(--transition);
-        }
+        html, body { overflow: hidden; height: 100vh; width: 100vw; margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--txt); transition: 0.4s; }
+        body { display: flex; align-items: center; justify-content: center; }
 
-        body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* STATUS BAR */
+        #top-bar { position: absolute; top: 10px; width: 95%; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        .status-pill { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: bold; background: rgba(128,128,128,0.1); padding: 5px 15px; border-radius: 20px; }
+        .bullet { width: 10px; height: 10px; border-radius: 50%; background: var(--stat); box-shadow: 0 0 10px var(--stat); }
+        .online { --stat: #00ff00 !important; }
 
-        /* THEME TOGGLE BUTTON */
-        #theme-toggle {
-            position: absolute; top: 15px; right: 20px; z-index: 200;
-            background: var(--card); border: 1px solid var(--dim-txt);
-            color: var(--txt); padding: 8px 15px; border-radius: 20px;
-            font-size: 0.8rem; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: var(--transition);
-        }
+        .last-result { font-size: 0.9rem; color: var(--gold); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
 
-        #banner { 
-            position: absolute; top: 0; width: 100%; padding: 4px; text-align: center; 
-            background: #cc7a00; color: #000; font-weight: bold; font-size: 0.7rem; z-index: 100;
-        }
-        .connected { background: #2e7d32 !important; color: #fff !important; }
+        .dash { width: 98vw; height: 90vh; display: grid; grid-template-columns: 1fr 260px 1fr; gap: 15px; padding: 20px; box-sizing: border-box; }
+        .card { background: var(--card); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; position: relative; border: 2px solid rgba(128,128,128,0.1); }
+        #p1-card { border-bottom: 12px solid var(--p1); }
+        #p2-card { border-bottom: 12px solid var(--p2); }
 
-        .dash { 
-            width: 96vw; height: 90vh; background: var(--card); padding: 1vh 2vw;
-            border-radius: 15px; box-shadow: 0 0 40px rgba(0,0,0,0.5); display: flex; flex-direction: column;
-            border: 1px solid rgba(128,128,128,0.1); box-sizing: border-box; transition: var(--transition);
-        }
+        .win-count { font-size: 8rem; font-weight: 900; opacity: 0.15; position: absolute; top: 20px; }
+        .player-label { font-size: 1.5rem; letter-spacing: 4px; color: #666; font-weight: 900; }
+        
+        .ring-container { position: relative; width: 240px; height: 240px; }
+        svg { transform: rotate(-90deg); width: 240px; height: 240px; }
+        circle { fill: none; stroke-width: 15; stroke-linecap: round; }
+        .track { stroke: rgba(128,128,128,0.1); }
+        .progress { stroke: var(--gold); transition: 1s linear; filter: drop-shadow(0 0 10px var(--gold)); }
+        #countdown-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; font-weight: 900; font-family: monospace; }
 
-        .header { text-align: center; border-bottom: 1px solid var(--dot-off); margin-bottom: 1vh; padding-bottom: 0.5vh; }
-        .header h1 { margin: 0; font-size: 3vh; color: var(--p2); letter-spacing: 2px; }
-        .header p { margin: 0; font-size: 1.5vh; color: var(--dim-txt); text-transform: uppercase; }
+        .dot { width: 40px; height: 40px; border-radius: 50%; background: #1a1a1a; border: 3px solid rgba(0,0,0,0.2); transition: 0.2s; }
+        .p1-s { background: var(--p1); box-shadow: 0 0 30px var(--p1); }
+        .p2-s { background: var(--p2); box-shadow: 0 0 30px var(--p2); }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; flex-grow: 1; margin-bottom: 1vh; }
-
-        .card { 
-            background: rgba(128,128,128,0.05); padding: 2vh; border-radius: 12px; text-align: center; 
-            border: 1px solid var(--dot-off); display: flex; flex-direction: column; justify-content: space-evenly;
-            transition: var(--transition);
-        }
-        #p1-card { border-top: 5px solid var(--p1); } 
-        #p2-card { border-top: 5px solid var(--p2); }
-
-        h3 { margin: 0; font-size: 2.5vh; color: var(--dim-txt); letter-spacing: 1px; }
-
-        .time { 
-            font-size: 10vh; font-family: 'Courier New', monospace; margin: 1vh 0; 
-            font-weight: 900; color: var(--txt); transition: var(--transition);
-        }
-
-        .strikes { display: flex; justify-content: center; gap: 3vw; }
-        .dot { 
-            width: 6vh; height: 6vh; border-radius: 50%; 
-            background: var(--dot-off); border: 2px solid rgba(0,0,0,0.1);
-            transition: background 0.2s, box-shadow 0.2s;
-        }
-        .p1-s { background: var(--p1) !important; box-shadow: 0 0 25px var(--p1); }
-        .p2-s { background: var(--p2) !important; box-shadow: 0 0 25px var(--p2); }
-
-        .win { 
-            position: absolute; bottom: 5vh; background: var(--txt); color: var(--bg);
-            padding: 2vh 6vw; border-radius: 50px; font-weight: 900; 
-            font-size: 4vh; display: none; z-index: 200; box-shadow: 0 0 50px rgba(0,0,0,0.3);
-        }
-
-        @media (max-height: 400px) { .time { font-size: 12vh; } .dot { width: 8vh; height: 8vh; } }
+        #final-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 50px; border-radius: 40px; font-size: 5rem; font-weight: 900; text-align: center; display: none; z-index: 1000; border: 20px solid var(--gold); }
+        
+        button { background: var(--card); color: var(--txt); border: 1px solid #444; padding: 8px 15px; border-radius: 15px; cursor: pointer; }
     </style>
 </head>
 <body class="dark-theme">
-    <button id="theme-toggle">☀️ LIGHT MODE</button>
-    <div id="banner">⚠️ OFFLINE - CHECK WIFI</div>
-    
-    <div class="dash">
-        <div class="header"><h1 id="m">BUZZWIRE PRO</h1><p id="s">INITIALIZING...</p></div>
-        <div class="grid">
-            <div class="card" id="p1-card"><h3>PLAYER 1</h3><div class="time" id="t1">00:00:000</div><div class="strikes"><div class="dot" id="p1-1"></div><div class="dot" id="p1-2"></div><div class="dot" id="p1-3"></div></div></div>
-            <div class="card" id="p2-card"><h3>PLAYER 2</h3><div class="time" id="t2">00:00:000</div><div class="strikes"><div class="dot" id="p2-1"></div><div class="dot" id="p2-2"></div><div class="dot" id="p2-3"></div></div></div>
-        </div>
+    <div id="top-bar">
+        <div class="status-pill"><div id="bullet" class="bullet"></div><span id="stat-text">DISCONNECTED</span></div>
+        <div class="last-result" id="history">LAST MATCH: NO DATA</div>
+        <button onclick="document.body.classList.toggle('light-theme')">🌓 THEME</button>
     </div>
-    <div class="win" id="win">WINNER!</div>
+
+    <div class="dash">
+        <div class="card" id="p1-card"><div class="win-count" id="p1-wins">0</div><div class="player-label">PLAYER 1</div><div style="display:flex;gap:15px;"><div class="dot" id="p1-1"></div><div class="dot" id="p1-2"></div><div class="dot" id="p1-3"></div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="ring-container"><svg><circle class="track" cx="120" cy="120" r="105"></circle><circle id="progress-bar" class="progress" cx="120" cy="120" r="105" stroke-dasharray="659.7" stroke-dashoffset="0"></circle></svg><div id="countdown-text">05:00</div></div>
+            <p id="match-status" style="margin-top:20px; font-weight:bold; letter-spacing:2px; color:#888;">TOUCH PAD TO START</p>
+        </div>
+        <div class="card" id="p2-card"><div class="win-count" id="p2-wins">0</div><div class="player-label">PLAYER 2</div><div style="display:flex;gap:15px;"><div class="dot" id="p2-1"></div><div class="dot" id="p2-2"></div><div class="dot" id="p2-3"></div></div></div>
+    </div>
+
+    <div id="final-popup"><div id="winner-text"></div><div style="font-size:1.5rem;color:#666;margin-top:20px;">REBOOTING IN <span id="reboot-timer">40</span>s</div></div>
 
     <script>
-        // THEME TOGGLE LOGIC
-        const btn = document.getElementById('theme-toggle');
-        btn.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-            const isLight = document.body.classList.contains('light-theme');
-            btn.innerText = isLight ? "🌙 DARK MODE" : "☀️ LIGHT MODE";
-        });
-
         let ws;
-        function fmt(ms) { 
-            if(ms >= 999999999) return "--:--:---";
-            let m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000), ms_r=ms%1000;
-            return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}:${ms_r.toString().padStart(3,'0')}`;
-        }
+        const circle = document.getElementById('progress-bar');
+        const circumference = 659.7;
+        
+        // Load history from browser storage
+        document.getElementById('history').innerText = "LAST MATCH: " + (localStorage.getItem('lastWin') || "NONE");
+
         function connect() {
-            ws = new WebSocket('ws://'+window.location.hostname+':81/');
-            ws.onopen = () => { let b=document.getElementById('banner'); b.innerText="LIVE LINK ACTIVE"; b.classList.add('connected'); };
-            ws.onclose = () => { let b=document.getElementById('banner'); b.innerText="RECONNECTING..."; b.classList.remove('connected'); setTimeout(connect, 2000); };
+            ws = new WebSocket('ws://' + window.location.hostname + ':81/');
+            ws.onopen = () => { document.getElementById('bullet').classList.add('online'); document.getElementById('stat-text').innerText="SYSTEM LIVE"; };
+            ws.onclose = () => { document.getElementById('bullet').classList.remove('online'); document.getElementById('stat-text').innerText="OFFLINE"; setTimeout(connect, 2000); };
             ws.onmessage = (e) => {
                 let d = JSON.parse(e.data);
-                document.getElementById('m').innerText = d.mode == "RACE" ? "🏁 HEAD-TO-HEAD" : "🕹️ TIME TRIAL";
-                document.getElementById('s').innerText = d.status;
-                if(d.status == "RUNNING") {
-                    document.getElementById('t1').innerText = fmt(d.elapsed);
-                    document.getElementById('t2').innerText = d.mode=="RACE" ? fmt(d.elapsed) : "--:--:---";
-                } else {
-                    document.getElementById('t1').innerText = fmt(d.p1_time);
-                    document.getElementById('t2').innerText = fmt(d.p2_time);
+                if(d.match_active) {
+                    let rem = Math.max(0, Math.floor((300000 - d.match_elapsed) / 1000));
+                    circle.style.strokeDashoffset = circumference - (rem / 300) * circumference;
+                    document.getElementById('countdown-text').innerText = `${Math.floor(rem/60).toString().padStart(2,'0')}:${(rem%60).toString().padStart(2,'0')}`;
                 }
+                document.getElementById('p1-wins').innerText = d.p1_match_wins;
+                document.getElementById('p2-wins').innerText = d.p2_match_wins;
+                document.getElementById('match-status').innerText = d.status;
                 for(let i=1;i<=3;i++) {
                     document.getElementById('p1-'+i).className = d.p1_strikes >= i ? 'dot p1-s' : 'dot';
                     document.getElementById('p2-'+i).className = d.p2_strikes >= i ? 'dot p2-s' : 'dot';
                 }
-                let w = document.getElementById('win');
-                if(d.status=="FINISHED") { w.style.display="block"; w.innerText="🏆 " + d.winner.replace('_',' '); } else { w.style.display="none"; }
+                if (d.status == "MATCH_OVER") {
+                    let winMsg = d.winner == "DRAW" ? "NO WINNER" : d.winner.replace('_',' ') + " WINS!";
+                    localStorage.setItem('lastWin', winMsg);
+                    document.getElementById('winner-text').innerText = winMsg;
+                    document.getElementById('final-popup').style.display = "block";
+                    startRebootTimer();
+                }
             };
         }
-        if ('serviceWorker' in navigator) {
-            const sw = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));";
-            const b = new Blob([sw], {type: 'text/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(b));
+        function startRebootTimer() {
+            let timeLeft = 40;
+            setInterval(() => {
+                if(timeLeft > 0) {
+                    timeLeft--; document.getElementById('reboot-timer').innerText = timeLeft;
+                    if(timeLeft == 5) ws.send("REBOOT");
+                    if(timeLeft == 0) location.reload();
+                }
+            }, 1000);
         }
         window.onload = connect;
     </script>
