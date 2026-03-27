@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuzzWire PWA Dashboard</title>
+    <!-- Basic Manifest for phone installation -->
+    <link rel="manifest" href="data:application/manifest+json,{'name':'BuzzWire','short_name':'BuzzWire','start_url':'.','display':'standalone','background_color':'#121212','theme_color':'#ff0055'}">
+    
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --card-dark: #1e1e1e;
+            --p1-color: #00e5ff;
+            --p2-color: #ff0055;
+            --text-main: #ffffff;
+            --text-dim: #b3b3b3;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Auto-Detect Connection Banner */
+        #conn-banner {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background-color: #ff9800;
+            color: black;
+            transition: all 0.5s ease;
+        }
+
+        .connected {
+            background-color: #4caf50 !important;
+            color: white !important;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--card-dark);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 { margin: 0; color: #ff0055; }
+        .header p { margin: 5px 0 0; color: var(--text-dim); }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .player-card {
+            background-color: #262626;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border-top: 4px solid #333;
+        }
+
+        #p1-card { border-color: var(--p1-color); }
+        #p2-card { border-color: var(--p2-color); }
+
+        .time-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            font-family: monospace;
+            margin: 15px 0;
+        }
+
+        .strikes {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #444;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .p1-strike { background-color: var(--p1-color) !important; box-shadow: 0 0 10px var(--p1-color); }
+        .p2-strike { background-color: var(--p2-color) !important; box-shadow: 0 0 10px var(--p2-color); }
+
+        .disqualified {
+            color: #ff3333;
+            font-weight: bold;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+
+        .winner-announce {
+            margin-top: 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #ff0055, #00e5ff);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="conn-banner">⚠️ Searching for BuzzWire ESP32... Connect to its Wi-Fi!</div>
+
+    <div class="dashboard">
+        <div class="header">
+            <h1 id="ui-mode">BUZZ WIRE</h1>
+            <p id="ui-status">Please select a mode on physical device</p>
+        </div>
+
+        <div class="game-grid">
+            <!-- Player 1 -->
+            <div class="player-card" id="p1-card">
+                <h3>PLAYER 1</h3>
+                <div class="time-display" id="p1-time">00:00:000</div>
+                <div class="strikes">
+                    <div class="dot" id="p1-d1"></div>
+                    <div class="dot" id="p1-d2"></div>
+                    <div class="dot" id="p1-d3"></div>
+                </div>
+                <p id="p1-status"></p>
+            </div>
+
+            <!-- Player 2 -->
+            <div class="player-card" id="p2-card">
+                <h3>PLAYER 2</h3>
+                <div class="time-display" id="p2-time">00:00:000</div>
+                <div class="strikes">
+                    <div class="dot" id="p2-d1"></div>
+                    <div class="dot" id="p2-d2"></div>
+                    <div class="dot" id="p2-d3"></div>
+                </div>
+                <p id="p2-status"></p>
+            </div>
+        </div>
+
+        <div class="winner-announce" id="winner-box">🏆 PLAYER X WINS!</div>
+    </div>
+
+    <script>
+        let ws;
+        const wsAddress = "ws://192.168.4.1:81/";
+
+        // Format raw milliseconds into MM:SS:MS
+        function formatTime(ms) {
+            if(ms >= 999999999) return "--:--:---";
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            const milliseconds = ms % 1000;
+
+            const pad = (n) => n.toString().padStart(2, '0');
+            const padMs = (n) => n.toString().padStart(3, '0');
+
+            return `${pad(minutes)}:${pad(seconds)}:${padMs(milliseconds)}`;
+        }
+
+        function connect() {
+            ws = new WebSocket(wsAddress);
+
+            ws.onopen = () => {
+                const banner = document.getElementById("conn-banner");
+                banner.innerText = "✅ Connected to BuzzWire ESP32!";
+                banner.classList.add("connected");
+            };
+
+            ws.onclose = () => {
+                const banner = document.getElementById("conn-banner");
+                banner.innerText = "⚠️ Connection Lost! Attempting reconnection...";
+                banner.classList.remove("connected");
+                setTimeout(connect, 2000); // 🔃 Auto-detect connection logic
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // UI Header Updates
+                document.getElementById("ui-mode").innerText = data.mode === "RACE" ? "🏁 HEAD TO HEAD RACE" : "🕹️ SOLO TIME TRIAL";
+                document.getElementById("ui-status").innerText = data.status.replace("_", " ");
+
+                // Live time logic
+                if (data.status === "RUNNING") {
+                    document.getElementById("p1-time").innerText = formatTime(data.elapsed);
+                    document.getElementById("p2-time").innerText = data.mode === "RACE" ? formatTime(data.elapsed) : "--:--:---";
+                } else if (data.status === "FINISHED") {
+                    document.getElementById("p1-time").innerText = formatTime(data.p1_time);
+                    document.getElementById("p2-time").innerText = formatTime(data.p2_time);
+                }
+
+                // Strikes UI updates
+                for(let i=1; i<=3; i++) {
+                    const d1 = document.getElementById(`p1-d${i}`);
+                    const d2 = document.getElementById(`p2-d${i}`);
+                    
+                    if(data.p1_strikes >= i) d1.classList.add("p1-strike"); else d1.classList.remove("p1-strike");
+                    if(data.p2_strikes >= i) d2.classList.add("p2-strike"); else d2.classList.remove("p2-strike");
+                }
+
+                // Knockout statuses
+                document.getElementById("p1-status").innerHTML = data.p1_strikes >= 3 ? "<span class='disqualified'>KNOCKED OUT! Go to start</span>" : "";
+                document.getElementById("p2-status").innerHTML = data.p2_strikes >= 3 ? "<span class='disqualified'>KNOCKED OUT! Go to start</span>" : "";
+
+                // Winner box
+                const winBox = document.getElementById("winner-box");
+                if (data.status === "FINISHED" && data.winner !== "NONE") {
+                    winBox.style.display = "block";
+                    winBox.innerText = data.winner === "DRAW" ? "🤝 IT'S A PHOTO FINISH DRAW!" : `🏆 ${data.winner.replace("_", " ")} WINS!`;
+                } else {
+                    winBox.style.display = "none";
+                }
+            };
+        }
+
+        // Initialize connect
+        window.onload = connect;
+    </script>
+</body>
+</html>
