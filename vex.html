@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BuzzWire Pro</title>
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22BuzzWire%20Race%22,%22short_name%22:%22BuzzWire%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#ff0055%22,%22orientation%22:%22landscape%22}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        /* THEME VARIABLES */
+        :root { 
+            --bg: #000000; --card: #121212; --txt: #ffffff; 
+            --dim-txt: #444444; --dot-off: #1a1a1a;
+            --p1: #00e5ff; --p2: #ff0055;
+            --transition: 0.4s ease;
+        }
+
+        /* LIGHT MODE OVERRIDES */
+        body.light-theme {
+            --bg: #f0f0f0; --card: #ffffff; --txt: #121212;
+            --dim-txt: #999999; --dot-off: #e0e0e0;
+        }
+        
+        html, body { 
+            overflow: hidden; height: 100vh; width: 100vw; margin: 0; padding: 0;
+            background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; 
+            color: var(--txt); transition: background var(--transition), color var(--transition);
+        }
+
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* THEME TOGGLE BUTTON */
+        #theme-toggle {
+            position: absolute; top: 15px; right: 20px; z-index: 200;
+            background: var(--card); border: 1px solid var(--dim-txt);
+            color: var(--txt); padding: 8px 15px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: var(--transition);
+        }
+
+        #banner { 
+            position: absolute; top: 0; width: 100%; padding: 4px; text-align: center; 
+            background: #cc7a00; color: #000; font-weight: bold; font-size: 0.7rem; z-index: 100;
+        }
+        .connected { background: #2e7d32 !important; color: #fff !important; }
+
+        .dash { 
+            width: 96vw; height: 90vh; background: var(--card); padding: 1vh 2vw;
+            border-radius: 15px; box-shadow: 0 0 40px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+            border: 1px solid rgba(128,128,128,0.1); box-sizing: border-box; transition: var(--transition);
+        }
+
+        .header { text-align: center; border-bottom: 1px solid var(--dot-off); margin-bottom: 1vh; padding-bottom: 0.5vh; }
+        .header h1 { margin: 0; font-size: 3vh; color: var(--p2); letter-spacing: 2px; }
+        .header p { margin: 0; font-size: 1.5vh; color: var(--dim-txt); text-transform: uppercase; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; flex-grow: 1; margin-bottom: 1vh; }
+
+        .card { 
+            background: rgba(128,128,128,0.05); padding: 2vh; border-radius: 12px; text-align: center; 
+            border: 1px solid var(--dot-off); display: flex; flex-direction: column; justify-content: space-evenly;
+            transition: var(--transition);
+        }
+        #p1-card { border-top: 5px solid var(--p1); } 
+        #p2-card { border-top: 5px solid var(--p2); }
+
+        h3 { margin: 0; font-size: 2.5vh; color: var(--dim-txt); letter-spacing: 1px; }
+
+        .time { 
+            font-size: 10vh; font-family: 'Courier New', monospace; margin: 1vh 0; 
+            font-weight: 900; color: var(--txt); transition: var(--transition);
+        }
+
+        .strikes { display: flex; justify-content: center; gap: 3vw; }
+        .dot { 
+            width: 6vh; height: 6vh; border-radius: 50%; 
+            background: var(--dot-off); border: 2px solid rgba(0,0,0,0.1);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .p1-s { background: var(--p1) !important; box-shadow: 0 0 25px var(--p1); }
+        .p2-s { background: var(--p2) !important; box-shadow: 0 0 25px var(--p2); }
+
+        .win { 
+            position: absolute; bottom: 5vh; background: var(--txt); color: var(--bg);
+            padding: 2vh 6vw; border-radius: 50px; font-weight: 900; 
+            font-size: 4vh; display: none; z-index: 200; box-shadow: 0 0 50px rgba(0,0,0,0.3);
+        }
+
+        @media (max-height: 400px) { .time { font-size: 12vh; } .dot { width: 8vh; height: 8vh; } }
+    </style>
+</head>
+<body class="dark-theme">
+    <button id="theme-toggle">☀️ LIGHT MODE</button>
+    <div id="banner">⚠️ OFFLINE - CHECK WIFI</div>
+    
+    <div class="dash">
+        <div class="header"><h1 id="m">BUZZWIRE PRO</h1><p id="s">INITIALIZING...</p></div>
+        <div class="grid">
+            <div class="card" id="p1-card"><h3>PLAYER 1</h3><div class="time" id="t1">00:00:000</div><div class="strikes"><div class="dot" id="p1-1"></div><div class="dot" id="p1-2"></div><div class="dot" id="p1-3"></div></div></div>
+            <div class="card" id="p2-card"><h3>PLAYER 2</h3><div class="time" id="t2">00:00:000</div><div class="strikes"><div class="dot" id="p2-1"></div><div class="dot" id="p2-2"></div><div class="dot" id="p2-3"></div></div></div>
+        </div>
+    </div>
+    <div class="win" id="win">WINNER!</div>
+
+    <script>
+        // THEME TOGGLE LOGIC
+        const btn = document.getElementById('theme-toggle');
+        btn.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            btn.innerText = isLight ? "🌙 DARK MODE" : "☀️ LIGHT MODE";
+        });
+
+        let ws;
+        function fmt(ms) { 
+            if(ms >= 999999999) return "--:--:---";
+            let m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000), ms_r=ms%1000;
+            return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}:${ms_r.toString().padStart(3,'0')}`;
+        }
+        function connect() {
+            ws = new WebSocket('ws://'+window.location.hostname+':81/');
+            ws.onopen = () => { let b=document.getElementById('banner'); b.innerText="LIVE LINK ACTIVE"; b.classList.add('connected'); };
+            ws.onclose = () => { let b=document.getElementById('banner'); b.innerText="RECONNECTING..."; b.classList.remove('connected'); setTimeout(connect, 2000); };
+            ws.onmessage = (e) => {
+                let d = JSON.parse(e.data);
+                document.getElementById('m').innerText = d.mode == "RACE" ? "🏁 HEAD-TO-HEAD" : "🕹️ TIME TRIAL";
+                document.getElementById('s').innerText = d.status;
+                if(d.status == "RUNNING") {
+                    document.getElementById('t1').innerText = fmt(d.elapsed);
+                    document.getElementById('t2').innerText = d.mode=="RACE" ? fmt(d.elapsed) : "--:--:---";
+                } else {
+                    document.getElementById('t1').innerText = fmt(d.p1_time);
+                    document.getElementById('t2').innerText = fmt(d.p2_time);
+                }
+                for(let i=1;i<=3;i++) {
+                    document.getElementById('p1-'+i).className = d.p1_strikes >= i ? 'dot p1-s' : 'dot';
+                    document.getElementById('p2-'+i).className = d.p2_strikes >= i ? 'dot p2-s' : 'dot';
+                }
+                let w = document.getElementById('win');
+                if(d.status=="FINISHED") { w.style.display="block"; w.innerText="🏆 " + d.winner.replace('_',' '); } else { w.style.display="none"; }
+            };
+        }
+        if ('serviceWorker' in navigator) {
+            const sw = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));";
+            const b = new Blob([sw], {type: 'text/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(b));
+        }
+        window.onload = connect;
+    </script>
+</body>
+</html>
