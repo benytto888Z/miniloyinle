@@ -1,253 +1,151 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BuzzWire PWA Dashboard</title>
-    <!-- Basic Manifest for phone installation -->
-    <link rel="manifest" href="data:application/manifest+json,{'name':'BuzzWire','short_name':'BuzzWire','start_url':'.','display':'standalone','background_color':'#121212','theme_color':'#ff0055'}">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BuzzWire Pro</title>
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22BuzzWire%20Race%22,%22short_name%22:%22BuzzWire%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#000000%22,%22theme_color%22:%22#ff0055%22,%22orientation%22:%22landscape%22}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        :root {
-            --bg-dark: #121212;
-            --card-dark: #1e1e1e;
-            --p1-color: #00e5ff;
-            --p2-color: #ff0055;
-            --text-main: #ffffff;
-            --text-dim: #b3b3b3;
+        /* THEME VARIABLES */
+        :root { 
+            --bg: #000000; --card: #121212; --txt: #ffffff; 
+            --dim-txt: #444444; --dot-off: #1a1a1a;
+            --p1: #00e5ff; --p2: #ff0055;
+            --transition: 0.4s ease;
         }
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+        /* LIGHT MODE OVERRIDES */
+        body.light-theme {
+            --bg: #f0f0f0; --card: #ffffff; --txt: #121212;
+            --dim-txt: #999999; --dot-off: #e0e0e0;
+        }
+        
+        html, body { 
+            overflow: hidden; height: 100vh; width: 100vw; margin: 0; padding: 0;
+            background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; 
+            color: var(--txt); transition: background var(--transition), color var(--transition);
         }
 
-        /* Auto-Detect Connection Banner */
-        #conn-banner {
-            width: 100%;
-            max-width: 600px;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 20px;
-            background-color: #ff9800;
-            color: black;
-            transition: all 0.5s ease;
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* THEME TOGGLE BUTTON */
+        #theme-toggle {
+            position: absolute; top: 15px; right: 20px; z-index: 200;
+            background: var(--card); border: 1px solid var(--dim-txt);
+            color: var(--txt); padding: 8px 15px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: var(--transition);
         }
 
-        .connected {
-            background-color: #4caf50 !important;
-            color: white !important;
+        #banner { 
+            position: absolute; top: 0; width: 100%; padding: 4px; text-align: center; 
+            background: #cc7a00; color: #000; font-weight: bold; font-size: 0.7rem; z-index: 100;
+        }
+        .connected { background: #2e7d32 !important; color: #fff !important; }
+
+        .dash { 
+            width: 96vw; height: 90vh; background: var(--card); padding: 1vh 2vw;
+            border-radius: 15px; box-shadow: 0 0 40px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+            border: 1px solid rgba(128,128,128,0.1); box-sizing: border-box; transition: var(--transition);
         }
 
-        .dashboard {
-            width: 100%;
-            max-width: 600px;
-            background-color: var(--card-dark);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+        .header { text-align: center; border-bottom: 1px solid var(--dot-off); margin-bottom: 1vh; padding-bottom: 0.5vh; }
+        .header h1 { margin: 0; font-size: 3vh; color: var(--p2); letter-spacing: 2px; }
+        .header p { margin: 0; font-size: 1.5vh; color: var(--dim-txt); text-transform: uppercase; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; flex-grow: 1; margin-bottom: 1vh; }
+
+        .card { 
+            background: rgba(128,128,128,0.05); padding: 2vh; border-radius: 12px; text-align: center; 
+            border: 1px solid var(--dot-off); display: flex; flex-direction: column; justify-content: space-evenly;
+            transition: var(--transition);
+        }
+        #p1-card { border-top: 5px solid var(--p1); } 
+        #p2-card { border-top: 5px solid var(--p2); }
+
+        h3 { margin: 0; font-size: 2.5vh; color: var(--dim-txt); letter-spacing: 1px; }
+
+        .time { 
+            font-size: 10vh; font-family: 'Courier New', monospace; margin: 1vh 0; 
+            font-weight: 900; color: var(--txt); transition: var(--transition);
         }
 
-        .header {
-            text-align: center;
-            border-bottom: 1px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+        .strikes { display: flex; justify-content: center; gap: 3vw; }
+        .dot { 
+            width: 6vh; height: 6vh; border-radius: 50%; 
+            background: var(--dot-off); border: 2px solid rgba(0,0,0,0.1);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .p1-s { background: var(--p1) !important; box-shadow: 0 0 25px var(--p1); }
+        .p2-s { background: var(--p2) !important; box-shadow: 0 0 25px var(--p2); }
+
+        .win { 
+            position: absolute; bottom: 5vh; background: var(--txt); color: var(--bg);
+            padding: 2vh 6vw; border-radius: 50px; font-weight: 900; 
+            font-size: 4vh; display: none; z-index: 200; box-shadow: 0 0 50px rgba(0,0,0,0.3);
         }
 
-        .header h1 { margin: 0; color: #ff0055; }
-        .header p { margin: 5px 0 0; color: var(--text-dim); }
-
-        .game-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .player-card {
-            background-color: #262626;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            border-top: 4px solid #333;
-        }
-
-        #p1-card { border-color: var(--p1-color); }
-        #p2-card { border-color: var(--p2-color); }
-
-        .time-display {
-            font-size: 2.5rem;
-            font-weight: bold;
-            font-family: monospace;
-            margin: 15px 0;
-        }
-
-        .strikes {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .dot {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background-color: #444;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .p1-strike { background-color: var(--p1-color) !important; box-shadow: 0 0 10px var(--p1-color); }
-        .p2-strike { background-color: var(--p2-color) !important; box-shadow: 0 0 10px var(--p2-color); }
-
-        .disqualified {
-            color: #ff3333;
-            font-weight: bold;
-            animation: pulse 1s infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { opacity: 0.5; }
-            to { opacity: 1; }
-        }
-
-        .winner-announce {
-            margin-top: 20px;
-            text-align: center;
-            background: linear-gradient(45deg, #ff0055, #00e5ff);
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: none;
-        }
-
+        @media (max-height: 400px) { .time { font-size: 12vh; } .dot { width: 8vh; height: 8vh; } }
     </style>
 </head>
-<body>
-
-    <div id="conn-banner">⚠️ Searching for BuzzWire ESP32... Connect to its Wi-Fi!</div>
-
-    <div class="dashboard">
-        <div class="header">
-            <h1 id="ui-mode">BUZZ WIRE</h1>
-            <p id="ui-status">Please select a mode on physical device</p>
+<body class="dark-theme">
+    <button id="theme-toggle">☀️ LIGHT MODE</button>
+    <div id="banner">⚠️ OFFLINE - CHECK WIFI</div>
+    
+    <div class="dash">
+        <div class="header"><h1 id="m">BUZZWIRE PRO</h1><p id="s">INITIALIZING...</p></div>
+        <div class="grid">
+            <div class="card" id="p1-card"><h3>PLAYER 1</h3><div class="time" id="t1">00:00:000</div><div class="strikes"><div class="dot" id="p1-1"></div><div class="dot" id="p1-2"></div><div class="dot" id="p1-3"></div></div></div>
+            <div class="card" id="p2-card"><h3>PLAYER 2</h3><div class="time" id="t2">00:00:000</div><div class="strikes"><div class="dot" id="p2-1"></div><div class="dot" id="p2-2"></div><div class="dot" id="p2-3"></div></div></div>
         </div>
-
-        <div class="game-grid">
-            <!-- Player 1 -->
-            <div class="player-card" id="p1-card">
-                <h3>PLAYER 1</h3>
-                <div class="time-display" id="p1-time">00:00:000</div>
-                <div class="strikes">
-                    <div class="dot" id="p1-d1"></div>
-                    <div class="dot" id="p1-d2"></div>
-                    <div class="dot" id="p1-d3"></div>
-                </div>
-                <p id="p1-status"></p>
-            </div>
-
-            <!-- Player 2 -->
-            <div class="player-card" id="p2-card">
-                <h3>PLAYER 2</h3>
-                <div class="time-display" id="p2-time">00:00:000</div>
-                <div class="strikes">
-                    <div class="dot" id="p2-d1"></div>
-                    <div class="dot" id="p2-d2"></div>
-                    <div class="dot" id="p2-d3"></div>
-                </div>
-                <p id="p2-status"></p>
-            </div>
-        </div>
-
-        <div class="winner-announce" id="winner-box">🏆 PLAYER X WINS!</div>
     </div>
+    <div class="win" id="win">WINNER!</div>
 
     <script>
+        // THEME TOGGLE LOGIC
+        const btn = document.getElementById('theme-toggle');
+        btn.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            btn.innerText = isLight ? "🌙 DARK MODE" : "☀️ LIGHT MODE";
+        });
+
         let ws;
-        const wsAddress = "ws://192.168.4.1:81/";
-
-        // Format raw milliseconds into MM:SS:MS
-        function formatTime(ms) {
+        function fmt(ms) { 
             if(ms >= 999999999) return "--:--:---";
-            const minutes = Math.floor(ms / 60000);
-            const seconds = Math.floor((ms % 60000) / 1000);
-            const milliseconds = ms % 1000;
-
-            const pad = (n) => n.toString().padStart(2, '0');
-            const padMs = (n) => n.toString().padStart(3, '0');
-
-            return `${pad(minutes)}:${pad(seconds)}:${padMs(milliseconds)}`;
+            let m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000), ms_r=ms%1000;
+            return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}:${ms_r.toString().padStart(3,'0')}`;
         }
-
         function connect() {
-            ws = new WebSocket(wsAddress);
-
-            ws.onopen = () => {
-                const banner = document.getElementById("conn-banner");
-                banner.innerText = "✅ Connected to BuzzWire ESP32!";
-                banner.classList.add("connected");
-            };
-
-            ws.onclose = () => {
-                const banner = document.getElementById("conn-banner");
-                banner.innerText = "⚠️ Connection Lost! Attempting reconnection...";
-                banner.classList.remove("connected");
-                setTimeout(connect, 2000); // 🔃 Auto-detect connection logic
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                // UI Header Updates
-                document.getElementById("ui-mode").innerText = data.mode === "RACE" ? "🏁 HEAD TO HEAD RACE" : "🕹️ SOLO TIME TRIAL";
-                document.getElementById("ui-status").innerText = data.status.replace("_", " ");
-
-                // Live time logic
-                if (data.status === "RUNNING") {
-                    document.getElementById("p1-time").innerText = formatTime(data.elapsed);
-                    document.getElementById("p2-time").innerText = data.mode === "RACE" ? formatTime(data.elapsed) : "--:--:---";
-                } else if (data.status === "FINISHED") {
-                    document.getElementById("p1-time").innerText = formatTime(data.p1_time);
-                    document.getElementById("p2-time").innerText = formatTime(data.p2_time);
-                }
-
-                // Strikes UI updates
-                for(let i=1; i<=3; i++) {
-                    const d1 = document.getElementById(`p1-d${i}`);
-                    const d2 = document.getElementById(`p2-d${i}`);
-                    
-                    if(data.p1_strikes >= i) d1.classList.add("p1-strike"); else d1.classList.remove("p1-strike");
-                    if(data.p2_strikes >= i) d2.classList.add("p2-strike"); else d2.classList.remove("p2-strike");
-                }
-
-                // Knockout statuses
-                document.getElementById("p1-status").innerHTML = data.p1_strikes >= 3 ? "<span class='disqualified'>KNOCKED OUT! Go to start</span>" : "";
-                document.getElementById("p2-status").innerHTML = data.p2_strikes >= 3 ? "<span class='disqualified'>KNOCKED OUT! Go to start</span>" : "";
-
-                // Winner box
-                const winBox = document.getElementById("winner-box");
-                if (data.status === "FINISHED" && data.winner !== "NONE") {
-                    winBox.style.display = "block";
-                    winBox.innerText = data.winner === "DRAW" ? "🤝 IT'S A PHOTO FINISH DRAW!" : `🏆 ${data.winner.replace("_", " ")} WINS!`;
+            ws = new WebSocket('ws://'+window.location.hostname+':81/');
+            ws.onopen = () => { let b=document.getElementById('banner'); b.innerText="LIVE LINK ACTIVE"; b.classList.add('connected'); };
+            ws.onclose = () => { let b=document.getElementById('banner'); b.innerText="RECONNECTING..."; b.classList.remove('connected'); setTimeout(connect, 2000); };
+            ws.onmessage = (e) => {
+                let d = JSON.parse(e.data);
+                document.getElementById('m').innerText = d.mode == "RACE" ? "🏁 HEAD-TO-HEAD" : "🕹️ TIME TRIAL";
+                document.getElementById('s').innerText = d.status;
+                if(d.status == "RUNNING") {
+                    document.getElementById('t1').innerText = fmt(d.elapsed);
+                    document.getElementById('t2').innerText = d.mode=="RACE" ? fmt(d.elapsed) : "--:--:---";
                 } else {
-                    winBox.style.display = "none";
+                    document.getElementById('t1').innerText = fmt(d.p1_time);
+                    document.getElementById('t2').innerText = fmt(d.p2_time);
                 }
+                for(let i=1;i<=3;i++) {
+                    document.getElementById('p1-'+i).className = d.p1_strikes >= i ? 'dot p1-s' : 'dot';
+                    document.getElementById('p2-'+i).className = d.p2_strikes >= i ? 'dot p2-s' : 'dot';
+                }
+                let w = document.getElementById('win');
+                if(d.status=="FINISHED") { w.style.display="block"; w.innerText="🏆 " + d.winner.replace('_',' '); } else { w.style.display="none"; }
             };
         }
-
-        // Initialize connect
+        if ('serviceWorker' in navigator) {
+            const sw = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));";
+            const b = new Blob([sw], {type: 'text/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(b));
+        }
         window.onload = connect;
     </script>
 </body>
